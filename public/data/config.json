@@ -1,0 +1,7 @@
+{
+  "appName": "Three.js Demo App",
+  "version": "1.0.0",
+  "volume": 0.8,
+  "theme": "dark",
+  "enableShadows": true
+}

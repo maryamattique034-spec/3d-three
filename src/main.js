@@ -1,109 +1,240 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+// import { Timer } from 'three/addons/misc/Timer.js';
 
-// 1. Scene
+// The scene is the container for everything you want to show
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x222222); // dark grey, so it's not pure black
 
-// 2. Camera (field of view, aspect ratio, near, far)
+// The camera is your eye
 const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
+  60,                              // field of view in degrees
+  window.innerWidth / window.innerHeight, // aspect ratio
+  0.1,                             // near: anything closer than this is invisible
+  100                              // far: anything farther than this is invisible
 );
-camera.position.z = 5; //move the camera back so we can see the cube
+camera.position.set(0, 2, 5);      // x, y, z: a bit up and back
+camera.lookAt(0, 1, 0);            // look slightly above the floor
 
-// 3. Renderer
+// The renderer draws the scene onto a <canvas>
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+document.body.appendChild(renderer.domElement); // put the canvas on the page
 
-// Geometry + Material = Mesh
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshStandardMaterial({ color: 0x00aaff });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube); // necessary to add the cube to the scene, otherwise it won't be visible
+// Light: without light, most materials look black
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
 
-// Light
-const light = new THREE.DirectionalLight(0xffffff, 3);
-light.position.set(2, 3, 4);
-scene.add(light);
+// DEBUG CUBE: if you see this, your setup works and only the model is the problem
+const testCube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0xff0000 })
+);
+testCube.position.set(-4, 0.5, 0);
+scene.add(testCube);
 
+// Timer gives us "delta" = seconds since the last frame
+// const timer = new THREE.Timer();
+const clock = new THREE.Clock();
 
+// mixer starts empty. We create it after the model loads.
+let mixer;
+
+const loader = new GLTFLoader();
+loader.load(
+  '/RobotExpressive.glb',                    // file inside the public folder (note the leading slash)
+
+  (gltf) => {                      // runs when loading succeeds
+    const model = gltf.scene;      // the 3D object itself
+    scene.add(model);
+
+    console.log('Model loaded:', model);
+    console.log('Animations found:', gltf.animations.map(c => c.name));
+
+    mixer = new THREE.AnimationMixer(model);   // mixer is tied to this model
+
+    if (gltf.animations.length > 0) {
+      const action = mixer.clipAction(gltf.animations[0]); // first clip
+      action.play();
+    } else {
+      console.warn('This model has no animations');
+    }
+  },
+
+  undefined,                       // progress callback (we don't need it)
+
+  (error) => {                     // runs when loading fails
+    console.error('Failed to load model:', error);
+  }
+);
+
+// Animation loop: runs about 60 times per second
 function animate() {
-  requestAnimationFrame(animate); // call animate() again and again
+  requestAnimationFrame(animate);  // ask the browser to call animate() again next frame
 
-  cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
+  // timer.update(timestamp);         // first update the timer with the current time
+  const delta = clock.getDelta();  // time since the last frame, in seconds
+  if (mixer) mixer.update(delta);  // advance the animation; without this nothing moves
 
-  renderer.render(scene, camera); // draw the scene
+  testCube.rotation.y += delta;    // spinning cube proves the loop works
+
+  renderer.render(scene, camera);  // draw one frame
 }
 animate();
 
+// Keep the canvas correct if the window is resized
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix(); // required after changing the camera's aspect
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import * as THREE from 'three';
+
+// // ----------------------------------------------------
+// // 1. Basic Scene, Camera, Renderer & Clock Setup
+// // ----------------------------------------------------
+// const scene = new THREE.Scene();
+// const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+// const clock = new THREE.Clock();
+
+// // Initialize Renderer and append to HTML document
+// const renderer = new THREE.WebGLRenderer({ antialias: true });
+// renderer.setSize(window.innerWidth, window.innerHeight);
+// document.body.appendChild(renderer.domElement);
+
+// // Move camera back so the cube becomes visible
+// camera.position.z = 5;
+
+// // Handle window resizing
 // window.addEventListener('resize', () => {
 //   camera.aspect = window.innerWidth / window.innerHeight;
 //   camera.updateProjectionMatrix();
 //   renderer.setSize(window.innerWidth, window.innerHeight);
 // });
 
+// // ----------------------------------------------------
+// // A. FILELOADER: Fetching a JSON configuration file
+// // ----------------------------------------------------
+// const fileLoader = new THREE.FileLoader();
+// fileLoader.setResponseType('json');
 
-// cube.position.set(1, 0, 1);   // x=2, y=0, z=0 (right side)
-// cube.scale.set(2, 2, 2);      // y direction mein double lamba
-// cube.rotation.y = Math.PI / 4; // 45 degree
-
-
-// // Sphere: (radius, widthSegments, heightSegments)
-// const sphere = new THREE.Mesh(
-//   new THREE.SphereGeometry(0.7, 32, 32),
-//   new THREE.MeshStandardMaterial({ color: 0xff4466 })
+// fileLoader.load(
+//   '/data/config.json',
+//   (gameConfig) => {
+//     console.log('Game Settings Loaded:', gameConfig);
+//   },
+//   undefined,
+//   (error) => {
+//     console.error('Failed to load configuration file:', error);
+//   }
 // );
-// sphere.position.x = -2.5;
-// scene.add(sphere);
 
-// // Torus (donut): (radius, tubeThickness, radialSegments, tubularSegments)
-// const torus = new THREE.Mesh(
-//   new THREE.TorusGeometry(0.6, 0.25, 16, 60),
-//   new THREE.MeshStandardMaterial({ color: 0xffcc00 })
+// // ----------------------------------------------------
+// // B. AUDIOLOADER: Playing background audio
+// // ----------------------------------------------------
+// const listener = new THREE.AudioListener();
+// camera.add(listener);
+
+// const backgroundSound = new THREE.Audio(listener);
+// const audioLoader = new THREE.AudioLoader();
+
+// audioLoader.load(
+//   '/audio/background_music.mp3',
+//   (audioBuffer) => {
+//     backgroundSound.setBuffer(audioBuffer);
+//     backgroundSound.setLoop(true);
+//     backgroundSound.setVolume(0.4);
+
+//     // Play audio after user interaction to bypass browser autoplay policy
+//     window.addEventListener('click', () => {
+//       if (!backgroundSound.isPlaying) {
+//         backgroundSound.play();
+//       }
+//     });
+//   },
+//   undefined,
+//   (error) => {
+//     console.error('Failed to fetch audio file:', error);
+//   }
 // );
-// torus.position.x = 2.5;
-// scene.add(torus);
 
-// // Cone: (radius, height, radialSegments)
-// const cone = new THREE.Mesh(
-//   new THREE.ConeGeometry(0.9, 2.5, 32),
-//   new THREE.MeshStandardMaterial({ color: 0x4dd688 })
+// // ----------------------------------------------------
+// // C. ANIMATIONLOADER & CUBE SETUP
+// // ----------------------------------------------------
+// // Create a visible mesh first
+// const geometry = new THREE.BoxGeometry(1, 1, 1);
+// const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+// const cube = new THREE.Mesh(geometry, material);
+// scene.add(cube);
+
+// const animLoader = new THREE.AnimationLoader();
+// let mixer;
+
+// animLoader.load(
+//   '/models/character.json',
+//   (clips) => {
+//     if (clips && clips.length > 0) {
+//       mixer = new THREE.AnimationMixer(cube);
+//       const action = mixer.clipAction(clips[0]);
+//       action.play();
+//     }
+//   },
+//   undefined,
+//   (error) => {
+//     console.error('Failed to load animation file:', error);
+//   }
 // );
-// cone.position.y = 2;
-// scene.add(cone);
 
+// // ----------------------------------------------------
+// // Animation & Render Loop
+// // ----------------------------------------------------
+// function animate() {
+//   requestAnimationFrame(animate);
 
-// // AmbientLight: no direction, just light up everything, no shadows
-// const ambient = new THREE.AmbientLight(0xffffff, 0.9);
-// scene.add(ambient);
+//   const delta = clock.getDelta();
+//   if (mixer) mixer.update(delta);
 
-// // PointLight: like bulb , from one point to all directions , will create shadows
-// const point = new THREE.PointLight(0xff8800, 50, 20);
-// point.position.set(-3, 2, 2);
-// scene.add(point);
+//   // Rotate cube slightly for visual feedback if no animation clip is loaded
+//   cube.rotation.x += 0.01;
+//   cube.rotation.y += 0.01;
+//   cube.rotation.z += 0.01;
 
+//   // Render the scene from the perspective of the camera
+//   renderer.render(scene, camera);
+// }
 
-// const axes = new THREE.AxesHelper(1);   // laal=X, hara=Y, neela=Z
-// scene.add(axes);
-
-// const grid = new THREE.GridHelper(10, 10); // zameen ki grid
-// scene.add(grid);
-
-// const lightHelper = new THREE.PointLightHelper(point, 0.3); // light ki jagah dikhata hai
-// scene.add(lightHelper);
-
-// import { OrbitControls } from 'three/addons/controls/OrbitControls.js'; // file ke sabse upar
-
-// const controls = new OrbitControls(camera, renderer.domElement);
-// controls.enableDamping = true; // smooth, halka sa slide hota hai
-// controls.enableZoom = false;
-
-// // animate() ke andar:
-// controls.update();
-
-
-
+// animate();
