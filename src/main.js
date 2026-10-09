@@ -27,10 +27,13 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
 // DEBUG CUBE: if you see this, your setup works and only the model is the problem
 const testCube = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshStandardMaterial({ color: 0xff0000 })
+  new THREE.MeshStandardMaterial({ color: 0xff3333 })
 );
-testCube.position.set(-4, 0.5, 0);
+testCube.position.set(-3, 0.5, 0);
 scene.add(testCube);
+
+scene.add(new THREE.AxesHelper(1));
+scene.add(new THREE.GridHelper(10, 10));
 
 // Timer gives us "delta" = seconds since the last frame
 // const timer = new THREE.Timer();
@@ -50,10 +53,12 @@ loader.load(
     console.log('Model loaded:', model);
     console.log('Animations found:', gltf.animations.map(c => c.name));
 
+    model.visible = true;
+
     mixer = new THREE.AnimationMixer(model);   // mixer is tied to this model
 
     if (gltf.animations.length > 0) {
-      const action = mixer.clipAction(gltf.animations[0]); // first clip
+      const action = mixer.clipAction(gltf.animations[10]); // first clip
       action.play();
     } else {
       console.warn('This model has no animations');
@@ -75,7 +80,10 @@ function animate() {
   const delta = clock.getDelta();  // time since the last frame, in seconds
   if (mixer) mixer.update(delta);  // advance the animation; without this nothing moves
 
-  testCube.rotation.y += delta;    // spinning cube proves the loop works
+  // testCube.rotation.y += delta;    // spinning cube proves the loop works
+  testCube.rotation.y += delta;
+  testCube.position.y = 0.5 + Math.sin(clock.elapsedTime * 2) * 0.5;
+  testCube.scale.set(1, 0.5, 1);
 
   renderer.render(scene, camera);  // draw one frame
 }
@@ -90,9 +98,11 @@ window.addEventListener('resize', () => {
 
 
 
+testCube.visible = false;
 
+// model.position.set(2, 0.5, 1);
 
-
+// model.scale.setScalar(1);
 
 
 
